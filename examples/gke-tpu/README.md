@@ -100,6 +100,7 @@ vars:
   authorized_cidr: "YOUR_IP_ADDRESS/32"
   reservation: ""  # Set reservation name if using reserved capacity
   spot: false      # Set to true to use Spot VMs
+  queue_name: user-queue # Name of Kueue LocalQueue (defaults to user-queue)
 ```
 
 ### Step 2: Deploy the Cluster

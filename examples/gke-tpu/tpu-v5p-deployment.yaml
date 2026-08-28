@@ -62,3 +62,6 @@ vars:
 
   # The namespace to be configured for running workloads
   user_namespace: default
+
+  # The Kueue LocalQueue name to be configured
+  queue_name: user-queue

@@ -78,6 +78,12 @@ vars:
   # The namespace to be configured for running workloads
   user_namespace: default
 
+  # The Kueue LocalQueue name to be configured
+  queue_name: user-queue
+
+  # Path to custom kueue configuration template
+  kueue_configuration_path: $(ghpc_stage("./kueue-configuration.yaml.tftpl"))
+
 deployment_groups:
 - group: primary
   modules:
@@ -182,11 +188,13 @@ deployment_groups:
     settings:
       kueue:
         install: true
+        config_path: $(vars.kueue_configuration_path)
         config_template_vars:
           tpu_quota: $(vars.num_slices * gke-tpu-pool.node_count_static * gke-tpu-pool.tpu_chips_per_node)
           accelerator_type: $(vars.accelerator_type)
           namespace: $(vars.user_namespace)
           tpu_topology: $(vars.tpu_topology)
+          queue_name: $(vars.queue_name)
       jobset:
         install: true
       cert_manager:
