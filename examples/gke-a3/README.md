@@ -60,15 +60,29 @@ Use `gcluster` to create and deploy the infrastructure:
 ./gcluster deploy gke-a3-cluster
 ```
 
-### 4. Connect and Run Sample Benchmark
+### 4. Connect and Run Sample Benchmarks
 
-Get GKE credentials and run the sample NCCL benchmark:
+Get GKE credentials:
 
 ```bash
 gcloud container clusters get-credentials my-a3-cluster --region us-central1 --project <YOUR-GCP-PROJECT-ID>
-
-kubectl apply -f examples/gke-a3/nccl-test.yaml
 ```
+
+Run the benchmark corresponding to your deployed hardware flavor:
+
+- **For A3 High (TCPX)**:
+  ```bash
+  kubectl apply -f examples/gke-a3/nccl-test.yaml
+  ```
+- **For A3 Mega (TCPXO)**:
+  ```bash
+  kubectl apply -f examples/gke-a3/nccl-test-latest.yaml
+  ```
+- **For A3 Ultra (RoCE / JobSet)**:
+  ```bash
+  kubectl apply -f examples/gke-a3/nccl-jobset-example.yaml
+  ```
+  *(Or see `system_benchmarks/` for automated Ramble benchmarks for HPL, NCCL, and NeMo).*
 
 ---
 
