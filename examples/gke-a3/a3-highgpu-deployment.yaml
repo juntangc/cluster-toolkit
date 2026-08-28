@@ -25,7 +25,11 @@ vars:
   zone: us-central1-c
   authorized_cidr:
   static_node_count: 2
-  reservation:
+  # (Optional) Spot VM pricing (default: false)
+  spot: false
+
+  # (Optional) GCE Reservation name. If omitted or left blank, NO_RESERVATION will be used.
+  # reservation: <RESERVATION_NAME>
 
   # A3 High Flavor
   machine_type: a3-highgpu-8g

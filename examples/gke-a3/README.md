@@ -52,7 +52,8 @@ Edit the deployment file with your project-specific values:
 | `region` / `zone` | The GCP region and zone (e.g., `us-central1` / `us-central1-c` for High, `us-east5` / `us-east5-a` for Mega, `us-central1` / `us-central1-a` for Ultra). |
 | `authorized_cidr` | Your public IP address in CIDR notation (e.g., `1.2.3.4/32`). |
 | `static_node_count` | Number of A3 GPU nodes to provision in the primary node pool. |
-| `reservation` | (Optional) The name of a GCE reservation to consume. |
+| `reservation` | (Optional) The name of a GCE reservation to consume. If omitted, `NO_RESERVATION` is used. |
+| `spot` | (Optional) Provision nodes as Spot VMs for discounted pricing (default: `false`). |
 | `bucket` | Name of the GCS bucket to store Terraform state. |
 | `queue_name` | (Optional) Local Kueue queue name (default: `a3-gpu`). |
 

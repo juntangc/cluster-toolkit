@@ -45,9 +45,12 @@ vars:
   static_node_count: 2
   queue_name: a3-gpu
 
-  # The name of the compute engine reservation in the form of <reservation-name>
-  # To target a BLOCK_NAME, the name can be inputted as <reservation-name>/reservationBlocks/<reservation-block-name>
-  reservation:
+  # (Optional) Spot VM pricing (default: false)
+  spot: false
+
+  # (Optional) Compute engine reservation name in the form of <reservation-name>
+  # If left empty, NO_RESERVATION will be used.
+  reservation: ""
 
   # Networking & Driver Plugin Configuration
   gpu_network_count: 4
@@ -147,13 +150,13 @@ deployment_groups:
       static_node_count: $(vars.static_node_count)
       zones: [$(vars.zone)]
       auto_upgrade: true
+      spot: $(vars.spot)
       guest_accelerator:
       - type: $(vars.accelerator_type)
         count: $(vars.accelerator_count)
       reservation_affinity:
-        consume_reservation_type: SPECIFIC_RESERVATION
-        specific_reservations:
-        - name: $(vars.reservation)
+        consume_reservation_type: '$(vars.reservation != null && vars.reservation != "" ? "SPECIFIC_RESERVATION" : "NO_RESERVATION")'
+        specific_reservations: '$(vars.reservation != null && vars.reservation != "" ? [{ name: vars.reservation }] : [])'
     outputs: [instructions]
 
   - id: workload_component_install
