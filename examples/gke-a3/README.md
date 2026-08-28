@@ -74,6 +74,7 @@ Run the benchmark corresponding to your deployed hardware flavor:
   ```bash
   kubectl apply -f examples/gke-a3/nccl-test.yaml
   ```
+  *(See [`multi-node-test-plan.md`](./multi-node-test-plan.md) for a detailed walkthrough on validating A3 High multi-node TCPX traffic and inspecting bandwidth).*
 - **For A3 Mega (TCPXO)**:
   ```bash
   kubectl apply -f examples/gke-a3/nccl-test-latest.yaml
