@@ -110,7 +110,7 @@ deployment_groups:
     source: modules/network/multivpc
     settings:
       network_name_prefix: $(vars.deployment_name)-gpunet
-      global_ip_address_range: 192.168.0.0/16
+      global_ip_address_range: 192.169.0.0/16
       network_count: $(vars.gpu_network_count)
       subnetwork_cidr_suffix: 20
       mtu: 8244
