@@ -1,0 +1,65 @@
+# Copyright 2026 "Google LLC"
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+terraform_backend_defaults:
+  type: gcs
+  configuration:
+    # The GCS bucket used for storing terraform state
+    bucket:
+
+vars:
+  # Your GCP Project ID
+  project_id:
+
+  # Unique deployment name
+  deployment_name: gke-tpu-v5e
+
+  # The GCP Region and Zone for this deployment.
+  # Example: us-central1, us-central1-a
+  region:
+  zone:
+
+  # The number of TPU slices to create
+  num_slices: 1
+
+  # TPU v5e machine type options:
+  # ct5lp-hightpu-1t (1 chip/VM), ct5lp-hightpu-4t (4 chips/VM), ct5lp-hightpu-8t (8 chips/VM)
+  machine_type: ct5lp-hightpu-4t
+
+  # The TPU placement topology for pod slice node pool.
+  # Options: 2x2 (4 chips), 2x4 (8 chips), 4x4 (16 chips), 4x8 (32 chips), 8x8 (64 chips), etc.
+  # See: https://docs.cloud.google.com/tpu/docs/v5e#topologies
+  tpu_topology: 2x2
+
+  # Cidr block containing the IP of the machine calling terraform.
+  # To allow all (IAM restrictions still enforced), use 0.0.0.0/0
+  # To allow only your IP address, use <YOUR-IP-ADDRESS>/32
+  authorized_cidr:
+
+  # The name of the compute engine reservation of TPU v5e nodes (optional)
+  # Leave empty if using On-Demand or Spot VMs
+  reservation: ""
+
+  # Set to true to provision TPU nodes as Spot VMs (only valid when reservation is empty)
+  spot: false
+
+  # TPU node pool boot disk type (pd-balanced by default for v5e)
+  node_pool_disk_type: pd-balanced
+  node_pool_disk_size_gb: 100
+
+  # Accelerator type for Kueue configuration
+  accelerator_type: tpu-v5-lite-podslice
+
+  # The namespace to be configured for running workloads
+  user_namespace: default
