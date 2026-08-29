@@ -41,7 +41,7 @@ The blueprint automatically configures the following components to enable optima
 Select the deployment configuration file matching your hardware:
 - **A3 High**: [`a3-highgpu-deployment.yaml`](./a3-highgpu-deployment.yaml)
 - **A3 Mega**: [`a3-megagpu-deployment.yaml`](./a3-megagpu-deployment.yaml)
-- **A3 Ultra**: [`a3-ultragpu-deployment.yaml`](./a3-ultragpu-deployment.yaml)
+- **A3 Ultra** (Standard & Advanced): [`a3-ultragpu-deployment.yaml`](./a3-ultragpu-deployment.yaml)
 
 Edit the deployment file with your project-specific values:
 
@@ -91,6 +91,24 @@ The Cluster Toolkit supports alternative consumption models such as Spot VMs or 
    ```bash
    ./gcluster deploy examples/gke-a3/gke-a3.yaml -d examples/gke-a3/a3-ultragpu-deployment.yaml
    ```
+
+   **For A3 Ultra (Advanced Storage & Benchmarks):**
+   ```bash
+   ./gcluster deploy examples/gke-a3/a3-ultragpu-advanced.yaml -d examples/gke-a3/a3-ultragpu-deployment.yaml
+   ```
+
+---
+
+## Advanced Blueprint: GKE A3 Ultra with Storage & FIO Benchmarks
+
+For production training pipelines that require full storage integration and automated I/O benchmarking, an advanced blueprint is available: [`a3-ultragpu-advanced.yaml`](./a3-ultragpu-advanced.yaml).
+
+### Key Features:
+* **Cloud Storage Buckets**: Automatically provisions `training_bucket` and `checkpoint_bucket` with Hierarchical Namespace (HNS) enabled.
+* **GCS FUSE Persistent Volumes**: Mounts `/training-data` and `/checkpoint-data` into the cluster using GCS FUSE Storage Profiles.
+* **Local SSD Ephemeral Storage**: Configures 1 TB ephemeral local SSD scratch space (`/scratch-data`) on A3 Ultra GPU nodes.
+* **FIO Storage Benchmarking Job**: Deploys an automated FIO job (`fio-bench-job-template`) to measure throughput and IOPS across local SSD scratch, training bucket reads, and checkpoint bucket writes.
+* **Optional Managed Storage**: Includes commented-out configurations for Managed Lustre, Hyperdisk, and Filestore.
 
 ---
 

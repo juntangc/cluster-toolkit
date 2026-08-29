@@ -31,6 +31,9 @@ vars:
   # (Optional) GCE Reservation name. If omitted or left blank, NO_RESERVATION will be used.
   # reservation: <RESERVATION_NAME>
 
+  # (Optional) Local Kueue queue name (default: a3-gpu)
+  queue_name: a3-gpu
+
   # A3 Ultra Flavor
   machine_type: a3-ultragpu-8g
   accelerator_type: nvidia-h200-141gb
