@@ -165,6 +165,14 @@ For large-scale distributed training spanning multiple independent TPU slices:
 kubectl apply -f examples/gke-tpu/tpu-multislice.yaml
 ```
 
+### C. ML Diagnostics Sample Workload Test (TPU v6e Only)
+A packaged container test to validate GKE ML Diagnostics SDK integration, metric emission, and XPlane profiling is available in [`ml-diagnostics-sample-workload-test/`](./ml-diagnostics-sample-workload-test/):
+
+> [!NOTE]
+> This test suite is specifically configured for **TPU v6e (Trillium)** clusters (`ct6e-standard-4t`).
+
+Follow the instructions in [`ml-diagnostics-sample-workload-test/README.md`](./ml-diagnostics-sample-workload-test/README.md) to build the test container in Artifact Registry and submit `sample_job.yaml`.
+
 ---
 
 ## 5. Capacity Management (Reservations & Spot VMs)
