@@ -1,0 +1,33 @@
+apiVersion: kubeflow.org/v2beta1
+kind: MPIJob
+metadata:
+  name: sample-mpi-job
+  namespace: default
+spec:
+  slotsPerWorker: 1
+  runPolicy:
+    cleanPodPolicy: Running
+  mpiReplicaSpecs:
+    Launcher:
+      replicas: 1
+      template:
+        spec:
+          containers:
+          - name: mpi-launcher
+            image: mpioperator/mpi-pi:v0.8.2-openmpi
+            command:
+            - mpirun
+            - --allow-run-as-root
+            - -n
+            - "2"
+            - --hostfile
+            - /etc/mpi/hostfile
+            - echo
+            - "Hello World from MPI worker!"
+    Worker:
+      replicas: 2
+      template:
+        spec:
+          containers:
+          - name: mpi-worker
+            image: mpioperator/mpi-pi:v0.8.2-openmpi

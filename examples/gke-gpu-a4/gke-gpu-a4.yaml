@@ -1,0 +1,401 @@
+# Copyright 2026 "Google LLC"
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+blueprint_name: gke-gpu-a4
+
+vars:
+  # GCP Project ID
+  project_id:
+
+  # Unique deployment name
+  deployment_name: gke-gpu-a4
+
+  # GCP Region and Zone
+  region:
+  zone:
+
+  # Number of GPU nodes to provision
+  static_node_count: 2
+
+  # Number of node pools / slices
+  num_node_pools: 1
+
+  # Authorized CIDR for cluster control plane access
+  authorized_cidr:
+
+  # Compute Engine reservation (optional)
+  reservation: ""
+  reservation_project_id: $(vars.project_id)
+
+  # Spot VM pricing (optional)
+  spot: false
+
+  # Machine & Hardware Flavor Settings
+  machine_type: a4x-highgpu-4g
+  accelerator_type: nvidia-gb200
+  accelerator_count: 4
+  gpu_rdma_network_count: 4
+  disk_type: hyperdisk-balanced
+  target_architecture: arm64
+  version_prefix: "1.35."
+
+  # Feature Flags
+  enable_dranet: true
+  enable_asapd_lite: false
+  enable_workload_policy: true
+  workload_policy_type: HIGH_THROUGHPUT
+  accelerator_topology: "1x72"
+  group_placement_max_distance: 0
+  hugepage_size_2m: 0
+
+  # Workload Manager & Kueue Settings
+  queue_name: a4
+  kueue_configuration_path: $(ghpc_stage("./kueue-configuration.yaml.tftpl"))
+  gib_installer_path: $(ghpc_stage("./nccl-installer.yaml.tftpl"))
+  nvidia_dra_driver_path: $(ghpc_stage("./nvidia-dra-driver.yaml"))
+  asapd_lite_installer_path: $(ghpc_stage("./asapd-lite-installer.yaml"))
+  k8s_service_account_name: workload-identity-k8s-sa
+
+  system_node_pool_disk_size_gb: 200
+  a4_node_pool_disk_size_gb: 100
+  nccl_plugin_version: v1.1.2
+  auto_monitoring_scope: "NONE"
+  enable_inference_gateway: false
+
+  # Managed Lustre Settings (optional)
+  # lustre_instance_id: gke-lustre-instance
+  # lustre_size_gib: 36000
+  # per_unit_storage_throughput: 500
+
+deployment_groups:
+- group: primary
+  modules:
+  - id: gke-a4-net-0
+    source: modules/network/vpc
+    settings:
+      network_name: $(vars.deployment_name)-net-0
+      ips_per_nat: 6
+      subnetworks:
+      - subnet_name: $(vars.deployment_name)-sub-0
+        subnet_region: $(vars.region)
+        subnet_ip: 192.168.0.0/18
+      secondary_ranges_list:
+      - subnetwork_name: $(vars.deployment_name)-sub-0
+        ranges:
+        - range_name: pods
+          ip_cidr_range: 10.4.0.0/14
+        - range_name: services
+          ip_cidr_range: 10.0.32.0/20
+      firewall_rules:
+      - name: $(vars.deployment_name)-internal-0
+        ranges: [192.168.0.0/16]
+        allow:
+        - protocol: tcp
+          ports: ["0-65535"]
+        - protocol: udp
+          ports: ["0-65535"]
+        - protocol: icmp
+
+  - id: gke-a4-net-1
+    source: modules/network/vpc
+    settings:
+      network_name: $(vars.deployment_name)-net-1
+      ips_per_nat: 6
+      subnetworks:
+      - subnet_name: $(vars.deployment_name)-sub-1
+        subnet_region: $(vars.region)
+        subnet_ip: 192.168.64.0/18
+      firewall_rules:
+      - name: $(vars.deployment_name)-internal-1
+        ranges: [192.168.0.0/16]
+        allow:
+        - protocol: tcp
+          ports: ["0-65535"]
+        - protocol: udp
+          ports: ["0-65535"]
+        - protocol: icmp
+
+  - id: gke-a4-rdma-net
+    source: modules/network/gpu-rdma-vpc
+    settings:
+      network_name: $(vars.deployment_name)-rdma-net
+      network_profile: https://www.googleapis.com/compute/beta/projects/$(vars.project_id)/global/networkProfiles/$(vars.zone)-vpc-roce
+      network_routing_mode: REGIONAL
+      subnetworks_template:
+        name_prefix: $(vars.deployment_name)-rdma-sub
+        count: $(vars.gpu_rdma_network_count)
+        ip_range: 192.168.128.0/18
+        region: $(vars.region)
+
+  - id: node_pool_service_account
+    source: modules/project/service-account
+    settings:
+      name: gke-np-sa
+      project_roles:
+      - logging.logWriter
+      - monitoring.metricWriter
+      - monitoring.viewer
+      - stackdriver.resourceMetadata.writer
+      - storage.objectAdmin
+      - artifactregistry.reader
+
+  - id: workload_service_account
+    source: modules/project/service-account
+    settings:
+      name: gke-wl-sa
+      project_roles:
+      - logging.logWriter
+      - monitoring.metricWriter
+      - monitoring.viewer
+      - stackdriver.resourceMetadata.writer
+      - storage.objectAdmin
+      - artifactregistry.reader
+      - container.admin
+
+  - id: training_bucket
+    source: modules/file-system/cloud-storage-bucket
+    settings:
+      local_mount: /training-data
+      name_prefix: training
+      random_suffix: true
+      force_destroy: false
+      enable_hierarchical_namespace: true
+
+  - id: checkpoint_bucket
+    source: modules/file-system/cloud-storage-bucket
+    settings:
+      local_mount: /checkpoint-data
+      name_prefix: checkpoint
+      random_suffix: true
+      force_destroy: false
+      enable_hierarchical_namespace: true
+
+  - id: a4-cluster
+    source: modules/scheduler/gke-cluster
+    use: [gke-a4-net-0, workload_service_account]
+    settings:
+      auto_monitoring_scope: $(vars.auto_monitoring_scope)
+      system_node_pool_machine_type: "e2-standard-16"
+      system_node_pool_disk_size_gb: $(vars.system_node_pool_disk_size_gb)
+      system_node_pool_taints: []
+      enable_dcgm_monitoring: true
+      enable_gcsfuse_csi: true
+      enable_managed_lustre_csi: true
+      enable_private_endpoint: false
+      configure_workload_identity_sa: true
+      enable_inference_gateway: $(vars.enable_inference_gateway)
+      master_authorized_networks:
+      - cidr_block: $(vars.authorized_cidr)
+        display_name: "kubectl-access-network"
+      additional_networks:
+        $(concat(gke-a4-net-1.instance_additional_networks,
+         gke-a4-rdma-net.subnetwork_interfaces_gke
+        ))
+      version_prefix: $(vars.version_prefix)
+      release_channel: REGULAR
+      maintenance_exclusions:
+      - name: no-minor-or-node-upgrades-indefinite
+        exclusion_scope: NO_MINOR_OR_NODE_UPGRADES
+        exclusion_end_time_behavior: UNTIL_END_OF_SUPPORT
+    outputs: [instructions]
+
+  # # --- MANAGED LUSTRE ADDITIONS ---
+  # - id: private_service_access
+  #   source: modules/network/private-service-access
+  #   use: [gke-a4-net-0]
+  #   settings:
+  #     prefix_length: 22
+  #
+  # - id: lustre_firewall_rule
+  #   source: modules/network/firewall-rules
+  #   use: [gke-a4-net-0]
+  #   settings:
+  #     ingress_rules:
+  #     - name: $(vars.deployment_name)-allow-lustre-traffic
+  #       description: Allow Managed Lustre traffic
+  #       source_ranges:
+  #       - $(private_service_access.cidr_range)
+  #       allow:
+  #       - protocol: tcp
+  #       ports:
+  #       - "988"
+  #
+  # - id: managed-lustre
+  #   source: modules/file-system/managed-lustre
+  #   use: [gke-a4-net-0, private_service_access]
+  #   settings:
+  #     name: $(vars.lustre_instance_id)
+  #     local_mount: /lustre
+  #     remote_mount: lustrefs
+  #     size_gib: $(vars.lustre_size_gib)
+  #     per_unit_storage_throughput: $(vars.per_unit_storage_throughput)
+  #
+  # - id: lustre-pv
+  #   source: modules/file-system/gke-persistent-volume
+  #   use: [managed-lustre, a4-cluster]
+  #   settings:
+  #     capacity_gib: $(vars.lustre_size_gib)
+
+  - id: workload_policy
+    source: modules/compute/resource-policy
+    settings:
+      name: $(vars.deployment_name)-policy
+      project_id: $(vars.project_id)
+      region: $(vars.region)
+      workload_policy:
+        accelerator_topology: '$(vars.accelerator_topology != "" ? vars.accelerator_topology : null)'
+        type: '$(vars.workload_policy_type != "" ? vars.workload_policy_type : null)'
+      group_placement_max_distance: $(vars.group_placement_max_distance)
+
+  - id: a4-pool
+    source: modules/compute/gke-node-pool
+    use: [a4-cluster, node_pool_service_account, workload_policy]
+    settings:
+      machine_type: $(vars.machine_type)
+      auto_upgrade: true
+      zones: [$(vars.zone)]
+      disk_size_gb: $(vars.a4_node_pool_disk_size_gb)
+      static_node_count: $(vars.static_node_count)
+      disk_type: $(vars.disk_type)
+      spot: $(vars.spot)
+      enable_dranet: $(vars.enable_dranet)
+      num_node_pools: $(vars.num_node_pools)
+      guest_accelerator:
+      - type: $(vars.accelerator_type)
+        count: $(vars.accelerator_count)
+      reservation_affinity:
+        consume_reservation_type: '$(vars.reservation != null && vars.reservation != "" ? "SPECIFIC_RESERVATION" : "NO_RESERVATION")'
+        specific_reservations: '$(vars.reservation != null && vars.reservation != "" ? [{ name: vars.reservation, project: vars.reservation_project_id }] : [])'
+      additional_networks:
+        $(concat(gke-a4-net-1.instance_additional_networks,
+         gke-a4-rdma-net.subnetwork_interfaces_gke
+        ))
+    outputs: [instructions]
+
+  - id: workload-manager-install
+    source: modules/management/kubectl-apply
+    use: [a4-cluster]
+    settings:
+      target_architecture: $(vars.target_architecture)
+      kueue:
+        install: true
+        version: "0.17.1"
+        config_path: $(vars.kueue_configuration_path)
+        config_template_vars:
+          num_gpus: $(a4-pool.static_gpu_count)
+          accelerator_type: $(vars.accelerator_type)
+          queue_name: $(vars.queue_name)
+      jobset:
+        install: true
+      nvidia_dra_driver:
+        install: $(vars.enable_dranet)
+        version: "v25.8.0"
+        accelerator_type: $(vars.accelerator_type)
+      asapd_lite:
+        install: $(vars.enable_asapd_lite)
+        config_path: $(vars.asapd_lite_installer_path)
+      gib:
+        install: true
+        path: $(vars.gib_installer_path)
+        template_vars:
+          image: '$(vars.target_architecture == "arm64" ? "us-docker.pkg.dev/gce-ai-infra/gpudirect-gib/nccl-plugin-gib-arm64" : "us-docker.pkg.dev/gce-ai-infra/gpudirect-gib/nccl-plugin-gib")'
+          version: $(vars.nccl_plugin_version)
+          accelerator_count: $(vars.accelerator_count)
+          node_affinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+              - matchExpressions:
+                - key: cloud.google.com/gke-accelerator
+                  operator: In
+                  values:
+                  - $(vars.accelerator_type)
+      apply_manifests:
+      - source: $(vars.nvidia_dra_driver_path)
+
+  - id: job-template
+    source: modules/compute/gke-job-template
+    use: [a4-pool]
+    settings:
+      image: '$(vars.target_architecture == "arm64" ? "nvidia/cuda:12.8.0-runtime-ubuntu24.04" : "nvidia/cuda:11.0.3-runtime-ubuntu20.04")'
+      command:
+      - nvidia-smi
+      node_count: $(vars.static_node_count)
+      name: run-nvidia-smi
+      k8s_service_account_name: $(vars.k8s_service_account_name)
+      tolerations: '$(vars.target_architecture == "arm64" ? [{ key: "kubernetes.io/arch", operator: "Equal", value: "arm64", effect: "NoSchedule" }] : [])'
+    outputs: [instructions]
+
+  - id: training-pv
+    source: modules/file-system/gke-persistent-volume
+    use: [training_bucket, a4-cluster]
+    settings:
+      capacity_gib: 1000000
+      gcsfuse_storage_class_name: gcsfusecsi-training
+
+  - id: checkpointing-pv
+    source: modules/file-system/gke-persistent-volume
+    use: [checkpoint_bucket, a4-cluster]
+    settings:
+      capacity_gib: 1000000
+      gcsfuse_storage_class_name: gcsfusecsi-checkpointing
+
+  - id: fio-bench-job-template
+    source: modules/compute/gke-job-template
+    use: [checkpointing-pv, training-pv, a4-pool]
+    settings:
+      name: gcsfuse-fio-job
+      security_context:
+      - key: runAsUser
+        value: 0
+      - key: runAsGroup
+        value: 100
+      - key: fsGroup
+        value: 100
+      ephemeral_volumes:
+      - type: local-ssd
+        mount_path: /scratch-data
+        size_gb: 1000
+      k8s_service_account_name: $(vars.k8s_service_account_name)
+      image: ubuntu:22.04
+      command:
+      - bash
+      - -c
+      - |
+        set -eux
+        export DEBIAN_FRONTEND=noninteractive
+        apt update -y && apt install -y fio
+        TAG=`date +%s`
+        df -h
+        mountpoint /scratch-data
+        mountpoint /checkpoint-data
+        mountpoint /training-data
+        mkdir -p /{scratch,training,checkpoint}-data/fio-benchmarks-${TAG}
+        fio --ioengine=libaio --filesize=10G --ramp_time=2s --runtime=1m \
+          --numjobs=32 --create_serialize=0 --direct=1 --verify=0 \
+          --randrepeat=0 --group_reporting --directory=/scratch-data/fio-benchmarks-${TAG} \
+          --name=scratch --blocksize=100m --iodepth=64 --readwrite=write
+        fio --ioengine=libaio --filesize=1G --ramp_time=2s --runtime=1m \
+          --numjobs=32 --create_serialize=0 --direct=1 --verify=0 \
+          --randrepeat=0 --group_reporting --directory=/training-data/fio-benchmarks-${TAG} \
+          --name=training --blocksize=1m --iodepth=64 --readwrite=randread
+        fio --ioengine=libaio --filesize=10G --ramp_time=2s --runtime=1m \
+          --numjobs=32 --create_serialize=0 --direct=1 --verify=0 \
+          --randrepeat=0 --group_reporting --directory=/checkpoint-data/fio-benchmarks-${TAG} \
+          --name=checkpoint --blocksize=100m --iodepth=64 --readwrite=write
+        fio --ioengine=libaio --filesize=10G --ramp_time=2s --runtime=1m \
+          --numjobs=32 --create_serialize=0 --direct=1 --verify=0 \
+          --randrepeat=0 --group_reporting --directory=/checkpoint-data/fio-benchmarks-${TAG} \
+          --name=checkpoint --blocksize=100m --iodepth=64 --readwrite=read
+        rm -rf /{scratch,training,checkpoint}-data/fio-benchmarks-${TAG}
+    outputs: [instructions]
