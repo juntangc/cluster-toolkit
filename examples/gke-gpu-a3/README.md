@@ -79,22 +79,22 @@ The Cluster Toolkit supports alternative consumption models such as Spot VMs or 
 
    **For A3 High:**
    ```bash
-   ./gcluster deploy examples/gke-a3/gke-a3.yaml -d examples/gke-a3/a3-highgpu-deployment.yaml
+   ./gcluster deploy examples/gke-gpu-a3/gke-gpu-a3.yaml -d examples/gke-gpu-a3/a3-highgpu-deployment.yaml
    ```
 
    **For A3 Mega:**
    ```bash
-   ./gcluster deploy examples/gke-a3/gke-a3.yaml -d examples/gke-a3/a3-megagpu-deployment.yaml
+   ./gcluster deploy examples/gke-gpu-a3/gke-gpu-a3.yaml -d examples/gke-gpu-a3/a3-megagpu-deployment.yaml
    ```
 
    **For A3 Ultra:**
    ```bash
-   ./gcluster deploy examples/gke-a3/gke-a3.yaml -d examples/gke-a3/a3-ultragpu-deployment.yaml
+   ./gcluster deploy examples/gke-gpu-a3/gke-gpu-a3.yaml -d examples/gke-gpu-a3/a3-ultragpu-deployment.yaml
    ```
 
    **For A3 Ultra (Advanced Storage & Benchmarks):**
    ```bash
-   ./gcluster deploy examples/gke-a3/a3-ultragpu-advanced.yaml -d examples/gke-a3/a3-ultragpu-deployment.yaml
+   ./gcluster deploy examples/gke-gpu-a3/a3-ultragpu-advanced.yaml -d examples/gke-gpu-a3/a3-ultragpu-deployment.yaml
    ```
 
 ---

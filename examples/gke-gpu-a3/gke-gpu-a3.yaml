@@ -14,7 +14,7 @@
 
 ---
 
-blueprint_name: gke-a3
+blueprint_name: gke-gpu-a3
 
 vars:
   # The following variables should be over-written in the deployment.yaml file.
