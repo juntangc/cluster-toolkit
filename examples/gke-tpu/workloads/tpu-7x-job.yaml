@@ -12,34 +12,38 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Kubernetes Pod designed to test a TPU 7x node in GKE.
-# Schedules a privileged container, installs latest JAX / libtpu libraries,
-# and verifies detected TPU chips.
-apiVersion: v1
-kind: Pod
+# Ready-to-run JAX TPU 7x workload for the default deployment (tpu7x-standard-4t, topology 2x2x1).
+# Queued and managed via Kueue.
+apiVersion: batch/v1
+kind: Job
 metadata:
-  name: tpu-job-jax-tpu7x
+  name: tpu-7x-jax-job
+  labels:
+    kueue.x-k8s.io/queue-name: user-queue
 spec:
-  restartPolicy: Never
-  nodeSelector:
-    cloud.google.com/gke-tpu-accelerator: tpu7x
-    cloud.google.com/gke-tpu-topology: 2x2x1
-  containers:
-  - name: tpu-job
-    image: python:3.12
-    ports:
-    - containerPort: 8431
-    securityContext:
-      privileged: true
-    command:
-    - bash
-    - -c
-    - |
-      set -ex
-      pip install -U --pre jax jaxlib libtpu requests -i https://us-python.pkg.dev/ml-oss-artifacts-published/jax/simple/ -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
-      python -c 'import jax; print("Global device count:", jax.device_count())'
-    resources:
-      requests:
-        google.com/tpu: 4
-      limits:
-        google.com/tpu: 4
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      nodeSelector:
+        cloud.google.com/gke-tpu-accelerator: tpu7x
+        cloud.google.com/gke-tpu-topology: 2x2x1
+      containers:
+      - name: tpu-job
+        image: python:3.12
+        ports:
+        - containerPort: 8431
+        securityContext:
+          privileged: true
+        command:
+        - bash
+        - -c
+        - |
+          set -ex
+          pip install -U --pre jax jaxlib libtpu requests -i https://us-python.pkg.dev/ml-oss-artifacts-published/jax/simple/ -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
+          python -c 'import jax; print("Global device count:", jax.device_count()); print("Local device count:", jax.local_device_count()); print("Devices:", jax.devices())'
+        resources:
+          requests:
+            google.com/tpu: 4
+          limits:
+            google.com/tpu: 4

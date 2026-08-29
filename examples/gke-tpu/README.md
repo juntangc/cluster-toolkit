@@ -123,27 +123,46 @@ kubectl get nodes -l cloud.google.com/gke-tpu-accelerator=tpu-v6e-slice
 
 ## 4. Running Test Workloads
 
-The [`workloads/`](./workloads/) directory includes ready-to-use JAX test manifests.
+The [`workloads/`](./workloads/) directory includes ready-to-run JAX test manifests configured for each TPU architecture and its default deployment topology:
 
-### A. Single-Host Job
-For single-node slices (e.g. TPU v5e `ct5lp-hightpu-4t` or single-host pods):
-```bash
-kubectl apply -f examples/gke-tpu/workloads/jax-singlehost-job.yaml
-kubectl logs -l job-name=tpu-singlehost-jax-job -f
-```
+### A. Run Generation-Specific Test Job
+Submit the workload matching your deployed TPU generation:
 
-### B. Multi-Host JobSet
-For multi-node TPU slices coordinated via JobSet and Kueue:
-```bash
-kubectl apply -f examples/gke-tpu/workloads/jax-multihost-jobset.yaml
-kubectl get jobsets
-kubectl logs -l jobset.sigs.k8s.io/jobset-name=tpu-multihost-jax-jobset -f
-```
+* **TPU v4** (`ct4p-hightpu-4t`, topology `2x2x1`):
+  ```bash
+  kubectl apply -f examples/gke-tpu/workloads/tpu-v4-job.yaml
+  kubectl get jobsets
+  ```
 
-### C. Multi-Slice JobSet
+* **TPU v5e** (`ct5lp-hightpu-4t`, topology `2x2`):
+  ```bash
+  kubectl apply -f examples/gke-tpu/workloads/tpu-v5e-job.yaml
+  kubectl logs -l job-name=tpu-v5e-jax-job -f
+  ```
+
+* **TPU v5p** (`ct5p-hightpu-4t`, topology `2x2x1`):
+  ```bash
+  kubectl apply -f examples/gke-tpu/workloads/tpu-v5p-job.yaml
+  kubectl get jobsets
+  ```
+
+* **TPU v6e** (`ct6e-standard-4t`, topology `2x4` / 2 hosts):
+  ```bash
+  kubectl apply -f examples/gke-tpu/workloads/tpu-v6e-job.yaml
+  kubectl get jobsets
+  kubectl logs -l jobset.sigs.k8s.io/jobset-name=tpu-v6e-jax-job -f
+  ```
+
+* **TPU 7x** (`tpu7x-standard-4t`, topology `2x2x1`):
+  ```bash
+  kubectl apply -f examples/gke-tpu/workloads/tpu-7x-job.yaml
+  kubectl logs -l job-name=tpu-7x-jax-job -f
+  ```
+
+### B. Multi-Slice JobSet
 For large-scale distributed training spanning multiple independent TPU slices:
 ```bash
-kubectl apply -f examples/gke-tpu/workloads/jax-multislice-jobset.yaml
+kubectl apply -f examples/gke-tpu/tpu-multislice.yaml
 ```
 
 ---

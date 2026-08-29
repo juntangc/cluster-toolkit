@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Single-host JAX TPU test job queued via Kueue.
-# Verifies JAX can detect all TPU chips on a single host.
+# Ready-to-run JAX TPU v5e workload for the default deployment (ct5lp-hightpu-4t, topology 2x2).
+# Queued and managed via Kueue.
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: tpu-singlehost-jax-job
+  name: tpu-v5e-jax-job
   labels:
     kueue.x-k8s.io/queue-name: user-queue
 spec:
@@ -41,7 +41,7 @@ spec:
         - bash
         - -c
         - |
-          python -c 'import jax; print("Global device count:", jax.device_count()); print("Local device count:", jax.local_device_count())'
+          python -c 'import jax; print("Global device count:", jax.device_count()); print("Local device count:", jax.local_device_count()); print("Devices:", jax.devices())'
           sleep 30
         resources:
           limits:

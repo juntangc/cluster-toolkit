@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Multi-host JAX TPU test running on a multi-node TPU slice.
-# Scheduled via Kueue and JobSet across all nodes in the slice.
+# Ready-to-run JAX TPU v5p workload for the default deployment (ct5p-hightpu-4t, topology 2x2x1).
+# Queued and managed via Kueue.
 apiVersion: jobset.x-k8s.io/v1alpha2
 kind: JobSet
 metadata:
-  name: tpu-multihost-jax-jobset
+  name: tpu-v5p-jax-job
   labels:
     kueue.x-k8s.io/queue-name: user-queue
 spec:
@@ -28,8 +28,8 @@ spec:
     replicas: 1
     template:
       spec:
-        parallelism: 2
-        completions: 2
+        parallelism: 1
+        completions: 1
         backoffLimit: 0
         template:
           metadata:
@@ -40,8 +40,8 @@ spec:
             dnsPolicy: ClusterFirstWithHostNet
             restartPolicy: Never
             nodeSelector:
-              cloud.google.com/gke-tpu-accelerator: tpu-v6e-slice
-              cloud.google.com/gke-tpu-topology: 2x4
+              cloud.google.com/gke-tpu-accelerator: tpu-v5p-slice
+              cloud.google.com/gke-tpu-topology: 2x2x1
             containers:
             - name: jax-tpu
               image: us-docker.pkg.dev/cloud-tpu-images/jax-ai-image/tpu:latest
@@ -55,8 +55,8 @@ spec:
               - bash
               - -c
               - |
-                python -c 'import jax; print("Global device count:", jax.device_count()); print("Local device count:", jax.local_device_count())'
-                sleep 60
+                python -c 'import jax; print("Global device count:", jax.device_count()); print("Local device count:", jax.local_device_count()); print("Devices:", jax.devices())'
+                sleep 30
               resources:
                 limits:
                   google.com/tpu: 4

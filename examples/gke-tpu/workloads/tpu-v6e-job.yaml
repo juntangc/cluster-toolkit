@@ -12,23 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# The following workload runs a JAX TPU test on a TPU slice node pool.
-# It is queued and scheduled via Kueue and prints the detected JAX TPU devices.
-#
-# NOTE: Preconfigured, ready-to-run sample jobs for each specific TPU generation
-# are available in the workloads/ directory:
-#   - workloads/tpu-v4-job.yaml   (TPU v4:  tpu-v4-podslice,      topology 2x2x1)
-#   - workloads/tpu-v5e-job.yaml  (TPU v5e: tpu-v5-lite-podslice, topology 2x2)
-#   - workloads/tpu-v5p-job.yaml  (TPU v5p: tpu-v5p-slice,        topology 2x2x1)
-#   - workloads/tpu-v6e-job.yaml  (TPU v6e: tpu-v6e-slice,        topology 2x4)
-#   - workloads/tpu-7x-job.yaml   (TPU 7x:  tpu7x,                topology 2x2x1)
-#
-# If customizing this manifest, update 'cloud.google.com/gke-tpu-accelerator' and
-# 'cloud.google.com/gke-tpu-topology' to match your deployment settings.
+# Ready-to-run JAX TPU v6e workload for the default deployment (ct6e-standard-4t, topology 2x4, 8 chips / 2 hosts).
+# Queued and managed via Kueue.
 apiVersion: jobset.x-k8s.io/v1alpha2
 kind: JobSet
 metadata:
-  name: tpu-kueue-jax-sample
+  name: tpu-v6e-jax-job
   labels:
     kueue.x-k8s.io/queue-name: user-queue
 spec:
@@ -66,8 +55,8 @@ spec:
               - bash
               - -c
               - |
-                python -c 'import jax; print("Global device count:", jax.device_count()); print("Local device count:", jax.local_device_count())'
-                sleep 60
+                python -c 'import jax; print("Global device count:", jax.device_count()); print("Local device count:", jax.local_device_count()); print("Devices:", jax.devices())'
+                sleep 30
               resources:
                 limits:
                   google.com/tpu: 4
